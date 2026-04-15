@@ -1,206 +1,210 @@
-const form = document.getElementById('productForm');
+const userBadge = document.getElementById('userBadge');
+const logoutBtn = document.getElementById('logoutBtn');
+const productForm = document.getElementById('productForm');
 const productIdInput = document.getElementById('productId');
 const titleInput = document.getElementById('title');
 const descriptionInput = document.getElementById('description');
-const imageInput = document.getElementById('image');
-const imagePreview = document.getElementById('imagePreview');
+const existingImageUrlInput = document.getElementById('existingImageUrl');
+const imageFileInput = document.getElementById('imageFile');
+const dashboardMessage = document.getElementById('dashboardMessage');
+const dashboardProducts = document.getElementById('dashboardProducts');
+const cancelEditBtn = document.getElementById('cancelEditBtn');
 const formTitle = document.getElementById('formTitle');
-const submitBtn = document.getElementById('submitBtn');
-const resetBtn = document.getElementById('resetBtn');
-const formStatus = document.getElementById('formStatus');
-const dashboardStatus = document.getElementById('dashboardStatus');
-const dashboardList = document.getElementById('dashboardList');
-const dashboardTemplate = document.getElementById('dashboardItemTemplate');
 const refreshDashboardBtn = document.getElementById('refreshDashboardBtn');
+const seedDemoBtn = document.getElementById('seedDemoBtn');
 
-let currentProducts = [];
-let currentImagePath = '';
+let currentSession = null;
 
-imageInput?.addEventListener('change', () => {
-  const file = imageInput.files?.[0];
-  if (!file) return;
-  imagePreview.src = URL.createObjectURL(file);
-});
+async function requireAuth() {
+  const { data, error } = await supabaseClient.auth.getSession();
 
-function resetForm() {
-  form.reset();
-  productIdInput.value = '';
-  currentImagePath = '';
-  imagePreview.src = FALLBACK_IMAGE;
-  formTitle.textContent = 'إضافة منتج جديد';
-  submitBtn.textContent = 'حفظ المنتج';
-  setStatus(formStatus, 'جاهز.', 'muted');
-}
-
-async function uploadImage(file) {
-  if (!file) return currentImagePath;
-
-  const extension = file.name.split('.').pop() || 'png';
-  const filePath = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-
-  const { error } = await supabaseClient.storage
-    .from(PRODUCT_BUCKET)
-    .upload(filePath, file, { cacheControl: '3600', upsert: false });
-
-  if (error) throw error;
-  return filePath;
-}
-
-function renderDashboard(products) {
-  dashboardList.innerHTML = '';
-
-  if (!products.length) {
-    setStatus(dashboardStatus, 'مازال ما كاين حتى منتج.', 'muted');
+  if (error || !data.session) {
+    window.location.href = 'login.html';
     return;
   }
 
-  const fragment = document.createDocumentFragment();
+  currentSession = data.session;
+  userBadge.textContent = data.session.user.email || 'Logged in';
+}
 
-  products.forEach((product) => {
-    const clone = dashboardTemplate.content.cloneNode(true);
-    const article = clone.querySelector('.dashboard-item');
-    const image = clone.querySelector('.dashboard-item-image');
-    const title = clone.querySelector('.dashboard-item-title');
-    const description = clone.querySelector('.dashboard-item-description');
-    const editBtn = clone.querySelector('.edit-btn');
-    const deleteBtn = clone.querySelector('.delete-btn');
+function resetForm() {
+  productForm.reset();
+  productIdInput.value = '';
+  formTitle.textContent = 'Add product';
+  cancelEditBtn.classList.add('hidden');
+}
 
-    image.src = getPublicImageUrl(product.image_url);
-    image.alt = product.title || 'صورة المنتج';
-    title.textContent = product.title || 'بدون عنوان';
-    description.textContent = product.description || 'بدون وصف';
-    article.dataset.id = product.id;
+function dashboardItemTemplate(product) {
+  const title = escapeHtml(product.title || 'Untitled product');
+  const description = escapeHtml(product.description || 'No description');
+  const imageUrl = product.image_url || 'product-sample.svg';
 
-    editBtn.addEventListener('click', () => startEdit(product.id));
-    deleteBtn.addEventListener('click', () => deleteProduct(product.id));
-
-    fragment.appendChild(clone);
-  });
-
-  dashboardList.appendChild(fragment);
-  setStatus(dashboardStatus, `تم تحميل ${products.length} منتج.`, 'success');
+  return `
+    <article class="dashboard-item">
+      <img src="${imageUrl}" alt="${title}" />
+      <div>
+        <h3>${title}</h3>
+        <p>${description}</p>
+        <div class="dashboard-actions">
+          <button class="btn btn-ghost" type="button" data-action="edit" data-id="${product.id}">Edit</button>
+          <button class="btn btn-danger" type="button" data-action="delete" data-id="${product.id}">Delete</button>
+        </div>
+      </div>
+    </article>
+  `;
 }
 
 async function loadDashboardProducts() {
-  setStatus(dashboardStatus, 'جاري تحميل المنتجات...', 'muted');
-  try {
-    currentProducts = await fetchProducts();
-    renderDashboard(currentProducts);
-  } catch (error) {
-    console.error(error);
-    setStatus(dashboardStatus, 'وقع مشكل فقراءة المنتجات.', 'error');
+  hideMessage(dashboardMessage);
+  dashboardProducts.innerHTML = '<div class="empty-state">Loading products...</div>';
+
+  const { data, error } = await supabaseClient
+    .from(TABLE_NAME)
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    dashboardProducts.innerHTML = '';
+    showMessage(dashboardMessage, error.message, 'error');
+    return;
   }
-}
 
-function startEdit(id) {
-  const product = currentProducts.find((item) => String(item.id) === String(id));
-  if (!product) return;
-
-  productIdInput.value = product.id;
-  titleInput.value = product.title || '';
-  descriptionInput.value = product.description || '';
-  currentImagePath = product.image_url || '';
-  imagePreview.src = getPublicImageUrl(product.image_url);
-  formTitle.textContent = 'تعديل المنتج';
-  submitBtn.textContent = 'تحديث المنتج';
-  setStatus(formStatus, `كتعدل دابا: ${product.title}`, 'success');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-async function createSampleIfEmpty() {
-  try {
-    const products = await fetchProducts();
-    if (products.length) return;
-
-    const { error } = await supabaseClient.from(PRODUCT_TABLE).insert([
-      {
-        title: 'سماعات لاسلكية احترافية',
-        description: 'منتج تجريبي مضاف تلقائياً باش تشوف كيفاش كيظهر العرض فالهوم. تقدر تعدلو أو تمسحو من الداشبورد.',
-        image_url: 'assets/sample-product.svg'
-      }
-    ]);
-
-    if (error) throw error;
-  } catch (error) {
-    console.error('Sample insert skipped:', error);
+  if (!data || data.length === 0) {
+    dashboardProducts.innerHTML = '<div class="empty-state">No products yet.</div>';
+    return;
   }
+
+  dashboardProducts.innerHTML = data.map(dashboardItemTemplate).join('');
 }
 
-form?.addEventListener('submit', async (event) => {
+async function uploadImageIfNeeded() {
+  const file = imageFileInput.files?.[0];
+  if (!file) return null;
+
+  const filePath = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
+  const { error } = await supabaseClient.storage
+    .from(BUCKET_NAME)
+    .upload(filePath, file, { upsert: true });
+
+  if (error) throw error;
+
+  const { data } = supabaseClient.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+  return data.publicUrl;
+}
+
+async function saveProduct(event) {
   event.preventDefault();
-  submitBtn.disabled = true;
-  setStatus(formStatus, 'جاري الحفظ...', 'muted');
+  hideMessage(dashboardMessage);
+
+  const id = productIdInput.value.trim();
+  const title = titleInput.value.trim();
+  const description = descriptionInput.value.trim();
+  let imageUrl = existingImageUrlInput.value.trim();
 
   try {
-    const id = productIdInput.value.trim();
-    const file = imageInput.files?.[0];
-    const imagePath = await uploadImage(file);
+    const uploadedUrl = await uploadImageIfNeeded();
+    if (uploadedUrl) imageUrl = uploadedUrl;
 
-    const payload = {
-      title: titleInput.value.trim(),
-      description: descriptionInput.value.trim(),
-      image_url: imagePath || currentImagePath || 'assets/sample-product.svg'
-    };
+    const payload = { title, description, image_url: imageUrl || null };
 
-    let response;
-
+    let error;
     if (id) {
-      response = await supabaseClient
-        .from(PRODUCT_TABLE)
-        .update(payload)
-        .eq('id', Number(id));
+      ({ error } = await supabaseClient.from(TABLE_NAME).update(payload).eq('id', id));
     } else {
-      response = await supabaseClient
-        .from(PRODUCT_TABLE)
-        .insert([payload]);
+      ({ error } = await supabaseClient.from(TABLE_NAME).insert([payload]));
     }
 
-    if (response.error) throw response.error;
+    if (error) throw error;
 
-    setStatus(formStatus, 'تم حفظ المنتج بنجاح.', 'success');
+    showMessage(dashboardMessage, id ? 'Product updated.' : 'Product created.', 'success');
     resetForm();
     await loadDashboardProducts();
   } catch (error) {
-    console.error(error);
-    setStatus(
-      formStatus,
-      'وقع مشكل فالحفظ. إلا كنت باغي التعديل والحذف يخدمو، خاصك تزيد policies ديال update و delete من الملف SQL اللي فالمشروع.',
-      'error'
-    );
-  } finally {
-    submitBtn.disabled = false;
-  }
-});
-
-async function deleteProduct(id) {
-  if (!confirm('واش متأكد بغيتي تمسح هاد المنتج؟')) return;
-
-  try {
-    const { error } = await supabaseClient
-      .from(PRODUCT_TABLE)
-      .delete()
-      .eq('id', Number(id));
-
-    if (error) throw error;
-
-    setStatus(dashboardStatus, 'تم حذف المنتج بنجاح.', 'success');
-    await loadDashboardProducts();
-    if (String(productIdInput.value) === String(id)) resetForm();
-  } catch (error) {
-    console.error(error);
-    setStatus(
-      dashboardStatus,
-      'الحذف ما خدمش لأن Supabase باقي ما فيهش delete policy. شغل الملف extra-policies.sql مرة وحدة.',
-      'error'
-    );
+    showMessage(dashboardMessage, error.message, 'error');
   }
 }
 
-resetBtn?.addEventListener('click', resetForm);
-refreshDashboardBtn?.addEventListener('click', loadDashboardProducts);
+async function handleDashboardClick(event) {
+  const action = event.target.dataset.action;
+  const id = event.target.dataset.id;
+  if (!action || !id) return;
 
-window.addEventListener('DOMContentLoaded', async () => {
-  resetForm();
-  await createSampleIfEmpty();
+  hideMessage(dashboardMessage);
+
+  const { data: product, error } = await supabaseClient
+    .from(TABLE_NAME)
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    showMessage(dashboardMessage, error.message, 'error');
+    return;
+  }
+
+  if (action === 'edit') {
+    productIdInput.value = product.id;
+    titleInput.value = product.title || '';
+    descriptionInput.value = product.description || '';
+    existingImageUrlInput.value = product.image_url || '';
+    imageFileInput.value = '';
+    formTitle.textContent = 'Edit product';
+    cancelEditBtn.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  if (action === 'delete') {
+    const confirmed = window.confirm(`Delete "${product.title}"?`);
+    if (!confirmed) return;
+
+    const storagePath = getStoragePathFromUrl(product.image_url || '');
+
+    if (storagePath) {
+      await supabaseClient.storage.from(BUCKET_NAME).remove([storagePath]);
+    }
+
+    const { error: deleteError } = await supabaseClient.from(TABLE_NAME).delete().eq('id', id);
+    if (deleteError) {
+      showMessage(dashboardMessage, deleteError.message, 'error');
+      return;
+    }
+
+    showMessage(dashboardMessage, 'Product deleted.', 'success');
+    await loadDashboardProducts();
+  }
+}
+
+async function addDemoProduct() {
+  hideMessage(dashboardMessage);
+  const payload = {
+    title: 'Demo Product',
+    description: 'This is a demo item created from the dashboard. You can edit or delete it anytime.',
+    image_url: 'https://picsum.photos/seed/site-doctor-demo/1200/900',
+  };
+
+  const { error } = await supabaseClient.from(TABLE_NAME).insert([payload]);
+  if (error) {
+    showMessage(dashboardMessage, error.message, 'error');
+    return;
+  }
+
+  showMessage(dashboardMessage, 'Demo product added.', 'success');
   await loadDashboardProducts();
+}
+
+logoutBtn?.addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = 'login.html';
 });
+
+productForm?.addEventListener('submit', saveProduct);
+dashboardProducts?.addEventListener('click', handleDashboardClick);
+cancelEditBtn?.addEventListener('click', resetForm);
+refreshDashboardBtn?.addEventListener('click', loadDashboardProducts);
+seedDemoBtn?.addEventListener('click', addDemoProduct);
+
+(async function initDashboard() {
+  await requireAuth();
+  await loadDashboardProducts();
+})();

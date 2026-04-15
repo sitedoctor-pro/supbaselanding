@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Login</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+  </head>
+  <body class="auth-page">
+    <main class="auth-wrapper">
+      <div class="auth-card">
+        <a class="brand" href="index.html">SiteDoctor Demo Store</a>
+        <h1>Dashboard login</h1>
+        <p class="muted">
+          Only the authenticated store owner can access the dashboard.
+        </p>
+
+        <form id="loginForm" class="stack-md">
+          <label>
+            <span>Email</span>
+            <input id="email" type="email" placeholder="you@example.com" required />
+          </label>
+
+          <label>
+            <span>Password</span>
+            <input id="password" type="password" placeholder="••••••••" required />
+          </label>
+
+          <button class="btn w-full" type="submit">Login</button>
+          <a class="btn btn-ghost w-full" href="index.html">Back to store</a>
+        </form>
+
+        <div id="loginMessage" class="notice hidden"></div>
+      </div>
+    </main>
+
+    <script src="login.js"></script>
+  </body>
+</html>

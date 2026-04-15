@@ -1,65 +1,60 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>متجر تجريبي | الصفحة الرئيسية</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <header class="site-header container">
-    <div>
-      <p class="eyebrow">واجهة تجريبية بسيطة</p>
-      <h1>منتجاتك تظهر هنا مباشرة</h1>
-      <p class="lead">
-        هادي صفحة رئيسية مربوطة بـ Supabase. أي منتج تضيفو أو تعدلو من الداشبورد كيظهر هنا تلقائياً.
-      </p>
-    </div>
-    <a class="button secondary" href="dashboard.html">فتح الداشبورد</a>
-  </header>
-
-  <main class="container">
-    <section class="hero-card">
-      <div>
-        <span class="badge">Supabase + HTML + JS</span>
-        <h2>عرض مباشر للمنتجات</h2>
-        <p>
-          تقدر تبدأ بهاد النسخة البسيطة، ومن بعد تزيد categories وcart وorders كيف ما بغيتي.
-        </p>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Store Front</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container row between center">
+        <a class="brand" href="index.html">SiteDoctor Demo Store</a>
+        <nav class="nav">
+          <a class="btn btn-ghost" href="login.html">Dashboard Login</a>
+        </nav>
       </div>
-    </section>
+    </header>
 
-    <section class="section-head">
-      <div>
-        <p class="eyebrow">المنتجات</p>
-        <h3>آخر المنتجات المضافة</h3>
-      </div>
-      <button id="reloadBtn" class="button ghost" type="button">تحديث</button>
-    </section>
-
-    <section id="statusBox" class="status-box">جاري تحميل المنتجات...</section>
-    <section id="productsGrid" class="products-grid"></section>
-  </main>
-
-  <template id="productTemplate">
-    <article class="product-card">
-      <img class="product-image" alt="صورة المنتج" />
-      <div class="product-content">
-        <div class="product-meta">
-          <span class="small-pill">منتج</span>
-          <span class="product-date"></span>
+    <main>
+      <section class="hero">
+        <div class="container hero-grid">
+          <div>
+            <span class="badge">Simple landing + dashboard</span>
+            <h1>Manage your store products from one protected dashboard.</h1>
+            <p>
+              Products below are loaded from Supabase. Add, edit, or delete them
+              from the dashboard after login.
+            </p>
+            <div class="hero-actions">
+              <a class="btn" href="login.html">Go to dashboard</a>
+              <a class="btn btn-ghost" href="#products">View products</a>
+            </div>
+          </div>
+          <div class="hero-card">
+            <img src="product-sample.svg" alt="Demo product" />
+          </div>
         </div>
-        <h4 class="product-title"></h4>
-        <p class="product-description"></p>
-      </div>
-    </article>
-  </template>
+      </section>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js"></script>
-  <script src="app.js"></script>
-</body>
+      <section id="products" class="section">
+        <div class="container">
+          <div class="section-head row between center">
+            <div>
+              <span class="muted">Products</span>
+              <h2>Latest products</h2>
+            </div>
+            <button id="refreshProductsBtn" class="btn btn-ghost" type="button">Refresh</button>
+          </div>
+
+          <div id="statusMessage" class="notice hidden"></div>
+          <div id="productsGrid" class="products-grid"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
 </html>

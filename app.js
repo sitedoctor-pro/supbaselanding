@@ -1,48 +1,49 @@
 const productsGrid = document.getElementById('productsGrid');
-const statusBox = document.getElementById('statusBox');
-const template = document.getElementById('productTemplate');
-const reloadBtn = document.getElementById('reloadBtn');
+const statusMessage = document.getElementById('statusMessage');
+const refreshProductsBtn = document.getElementById('refreshProductsBtn');
 
-function renderProducts(products) {
-  productsGrid.innerHTML = '';
+function productCardTemplate(product) {
+  const title = escapeHtml(product.title || 'Untitled product');
+  const description = escapeHtml(product.description || 'No description');
+  const imageUrl = product.image_url || 'product-sample.svg';
 
-  if (!products.length) {
-    setStatus(statusBox, 'مازال ما كاين حتى منتج. زيد أول منتج من الداشبورد.', 'muted');
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-
-  products.forEach((product) => {
-    const clone = template.content.cloneNode(true);
-    const image = clone.querySelector('.product-image');
-    const title = clone.querySelector('.product-title');
-    const description = clone.querySelector('.product-description');
-    const date = clone.querySelector('.product-date');
-
-    image.src = getPublicImageUrl(product.image_url);
-    image.alt = product.title || 'صورة المنتج';
-    title.textContent = product.title || 'بدون عنوان';
-    description.textContent = product.description || 'بدون وصف';
-    date.textContent = formatDate(product.created_at);
-
-    fragment.appendChild(clone);
-  });
-
-  productsGrid.appendChild(fragment);
-  setStatus(statusBox, `تم تحميل ${products.length} منتج بنجاح.`, 'success');
+  return `
+    <article class="product-card">
+      <img src="${imageUrl}" alt="${title}" />
+      <div class="product-card-content">
+        <h3>${title}</h3>
+        <p>${description}</p>
+      </div>
+    </article>
+  `;
 }
 
 async function loadProducts() {
-  setStatus(statusBox, 'جاري تحميل المنتجات...', 'muted');
-  try {
-    const products = await fetchProducts();
-    renderProducts(products);
-  } catch (error) {
-    console.error(error);
-    setStatus(statusBox, 'وقع مشكل فقراءة المنتجات من Supabase.', 'error');
+  hideMessage(statusMessage);
+  productsGrid.innerHTML = '<div class="empty-state">Loading products...</div>';
+
+  const { data, error } = await supabaseClient
+    .from(TABLE_NAME)
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    productsGrid.innerHTML = '';
+    showMessage(statusMessage, error.message, 'error');
+    return;
   }
+
+  if (!data || data.length === 0) {
+    productsGrid.innerHTML = `
+      <div class="empty-state">
+        No products yet. Open the dashboard and add your first one.
+      </div>
+    `;
+    return;
+  }
+
+  productsGrid.innerHTML = data.map(productCardTemplate).join('');
 }
 
-reloadBtn?.addEventListener('click', loadProducts);
-window.addEventListener('DOMContentLoaded', loadProducts);
+refreshProductsBtn?.addEventListener('click', loadProducts);
+loadProducts();

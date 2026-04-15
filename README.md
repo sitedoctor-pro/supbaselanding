@@ -1,24 +1,24 @@
-# Supabase Landing + Dashboard
+# Supabase Store Dashboard (Static HTML)
 
-مشروع بسيط بـ HTML/CSS/JS مربوط مع Supabase.
+## Files
+- `index.html`: public store page
+- `login.html`: login page for the owner
+- `dashboard.html`: protected dashboard page
+- `style.css`: all styles
+- `supabase.js`: Supabase connection setup
+- `app.js`: loads products into the store page
+- `login.js`: handles sign in
+- `dashboard.js`: add/edit/delete products
+- `auth-policies.sql`: secure policies for authenticated dashboard use only
+- `product-sample.svg`: local sample image
 
-## الملفات
-- `index.html` الصفحة الرئيسية
-- `dashboard.html` لوحة التحكم
-- `style.css` التنسيق
-- `supabase.js` إعدادات Supabase
-- `app.js` منطق الصفحة الرئيسية
-- `dashboard.js` منطق لوحة التحكم
-- `extra-policies.sql` صلاحيات إضافية للتعديل والحذف
+## Important setup
+1. Upload these files to GitHub.
+2. Run `auth-policies.sql` once in Supabase SQL Editor.
+3. Use `login.html` to sign in.
+4. After login, open `dashboard.html`.
 
-## مهم
-أنت فعّلت بالفعل:
-- قراءة المنتجات
-- إضافة المنتجات
-- رفع الصور
-- مشاهدة الصور
-
-باش **التعديل والحذف** يخدمو، خاصك تشغل مرة وحدة الملف `extra-policies.sql` داخل SQL Editor في Supabase.
-
-## النشر على GitHub Pages
-بما أن المشروع static، تقدر ترفعه مباشرة إلى GitHub ثم GitHub Pages.
+## Notes
+- Public visitors can view `index.html`.
+- Only authenticated users can use the dashboard after applying `auth-policies.sql`.
+- The dashboard supports remote image URLs or uploaded images.

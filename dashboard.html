@@ -1,94 +1,82 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>لوحة التحكم | المنتجات</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <header class="site-header container compact-header">
-    <div>
-      <p class="eyebrow">Dashboard</p>
-      <h1>إدارة المنتجات</h1>
-      <p class="lead">تقدر تضيف، تعدل، وتمسح المنتجات من هنا.</p>
-    </div>
-    <a class="button secondary" href="index.html">رجوع للهوم</a>
-  </header>
-
-  <main class="container dashboard-layout">
-    <section class="panel">
-      <div class="section-head tighter">
-        <div>
-          <p class="eyebrow">النموذج</p>
-          <h3 id="formTitle">إضافة منتج جديد</h3>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container row between center">
+        <a class="brand" href="index.html">SiteDoctor Demo Store</a>
+        <div class="row gap-sm wrap">
+          <span id="userBadge" class="badge">Checking session...</span>
+          <a class="btn btn-ghost" href="index.html">View store</a>
+          <button id="logoutBtn" class="btn btn-danger" type="button">Logout</button>
         </div>
       </div>
+    </header>
 
-      <form id="productForm" class="product-form">
-        <input type="hidden" id="productId" />
+    <main class="section">
+      <div class="container dashboard-grid">
+        <section class="card">
+          <div class="row between center">
+            <div>
+              <h2 id="formTitle">Add product</h2>
+              <p class="muted">Create or update products that appear on the public page.</p>
+            </div>
+            <button id="seedDemoBtn" class="btn btn-ghost" type="button">Add demo product</button>
+          </div>
 
-        <label>
-          <span>العنوان</span>
-          <input id="title" type="text" placeholder="مثال: ساعة ذكية رياضية" required />
-        </label>
+          <form id="productForm" class="stack-md top-gap">
+            <input id="productId" type="hidden" />
 
-        <label>
-          <span>الوصف</span>
-          <textarea id="description" rows="5" placeholder="كتب وصف مختصر للمنتج" required></textarea>
-        </label>
+            <label>
+              <span>Title</span>
+              <input id="title" type="text" placeholder="Wireless Headphones" required />
+            </label>
 
-        <label>
-          <span>الصورة</span>
-          <input id="image" type="file" accept="image/*" />
-        </label>
+            <label>
+              <span>Description</span>
+              <textarea id="description" rows="4" placeholder="Short product description" required></textarea>
+            </label>
 
-        <div class="preview-wrap">
-          <img id="imagePreview" class="preview-image" src="assets/sample-product.svg" alt="معاينة الصورة" />
-        </div>
+            <label>
+              <span>Current image URL (optional)</span>
+              <input id="existingImageUrl" type="url" placeholder="https://..." />
+            </label>
 
-        <div class="form-actions">
-          <button class="button" type="submit" id="submitBtn">حفظ المنتج</button>
-          <button class="button ghost" type="button" id="resetBtn">إلغاء التعديل</button>
-        </div>
-      </form>
+            <label>
+              <span>Upload new image (optional)</span>
+              <input id="imageFile" type="file" accept="image/*" />
+            </label>
 
-      <div id="formStatus" class="status-box muted">جاهز.</div>
-    </section>
+            <div class="row gap-sm wrap">
+              <button id="saveBtn" class="btn" type="submit">Save product</button>
+              <button id="cancelEditBtn" class="btn btn-ghost hidden" type="button">Cancel edit</button>
+            </div>
+          </form>
 
-    <section class="panel">
-      <div class="section-head tighter">
-        <div>
-          <p class="eyebrow">القائمة</p>
-          <h3>كل المنتجات</h3>
-        </div>
-        <button id="refreshDashboardBtn" class="button ghost" type="button">تحديث</button>
+          <div id="dashboardMessage" class="notice hidden top-gap"></div>
+        </section>
+
+        <section class="card">
+          <div class="row between center">
+            <div>
+              <h2>Products list</h2>
+              <p class="muted">Edit or delete any product.</p>
+            </div>
+            <button id="refreshDashboardBtn" class="btn btn-ghost" type="button">Refresh</button>
+          </div>
+
+          <div id="dashboardProducts" class="dashboard-products top-gap"></div>
+        </section>
       </div>
+    </main>
 
-      <div id="dashboardStatus" class="status-box">جاري تحميل المنتجات...</div>
-      <div id="dashboardList" class="dashboard-list"></div>
-    </section>
-  </main>
-
-  <template id="dashboardItemTemplate">
-    <article class="dashboard-item">
-      <img class="dashboard-item-image" alt="صورة المنتج" />
-      <div class="dashboard-item-body">
-        <h4 class="dashboard-item-title"></h4>
-        <p class="dashboard-item-description"></p>
-        <div class="dashboard-item-actions">
-          <button class="button small edit-btn" type="button">تعديل</button>
-          <button class="button small danger delete-btn" type="button">حذف</button>
-        </div>
-      </div>
-    </article>
-  </template>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js"></script>
-  <script src="dashboard.js"></script>
-</body>
+    <script src="dashboard.js"></script>
+  </body>
 </html>
